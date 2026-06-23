@@ -5,9 +5,10 @@ import toast from 'react-hot-toast';
 import { FiSave, FiInfo, FiCreditCard, FiUpload, FiImage } from 'react-icons/fi';
 
 const CompanySettings = () => {
-  const { settings, fetchSettings, updateSettings } = useContext(SettingsContext);
+  const { settings, fetchSettings, updateSettings, updateLogo } = useContext(SettingsContext);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // Form Fields
   const [companyName, setCompanyName] = useState('');
@@ -27,6 +28,31 @@ const CompanySettings = () => {
 
   // Logo URL
   const [logoUrl, setLogoUrl] = useState('');
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      return toast.error('Please select an image file');
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return toast.error('Logo image size must be less than 5MB');
+    }
+
+    setIsUploadingLogo(true);
+    const loadingToast = toast.loading('Uploading logo to Cloudinary...');
+    try {
+      const uploadedLogo = await updateLogo(file);
+      setLogoUrl(uploadedLogo.url);
+      toast.success('Logo uploaded and saved successfully!', { id: loadingToast });
+    } catch (err) {
+      toast.error(err.message || 'Failed to upload logo', { id: loadingToast });
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -82,9 +108,10 @@ const CompanySettings = () => {
         ifscCode
       },
       logo: {
-        public_id: '',
+        public_id: settings?.logo?.public_id || '',
         url: logoUrl
       }
+
     };
 
     setSaving(true);
@@ -343,22 +370,30 @@ const CompanySettings = () => {
                 )}
               </div>
 
-              {/* Logo URL Input */}
+              {/* Logo File Selector */}
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Logo URL link (PNG/JPG)
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Upload Logo File (PNG/JPG)
                 </label>
-                <input
-                  type="url"
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  placeholder="https://example.com/logo.png"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all"
-                />
+                <label className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
+                  <FiUpload className="w-4 h-4 text-indigo-600" />
+                  <span className="text-slate-600 text-xs font-bold">
+                    {isUploadingLogo ? 'Uploading to Cloudinary...' : 'Choose Logo Image'}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={isUploadingLogo}
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                </label>
+                <p className="text-[9px] text-slate-400 mt-2 font-medium">Recommended: Square format (1:1), transparent PNG, up to 5MB.</p>
               </div>
 
             </div>
           </div>
+
 
           {/* Save trigger */}
           <button

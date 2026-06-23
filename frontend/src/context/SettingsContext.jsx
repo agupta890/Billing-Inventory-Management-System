@@ -41,13 +41,16 @@ export const SettingsProvider = ({ children }) => {
     }
   };
 
-  const updateLogo = async (url, public_id = '') => {
+  const updateLogo = async (logoFile) => {
     setLoading(true);
     setError(null);
     try {
+      const formData = new FormData();
+      formData.append('logo', logoFile);
+
       const data = await apiRequest('/settings/logo', {
         method: 'POST',
-        body: { url, public_id },
+        body: formData,
       });
       setSettings((prev) => ({
         ...prev,

@@ -13,10 +13,17 @@ const getHeaders = () => {
 
 export const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_URL}${endpoint}`;
+  const defaultHeaders = getHeaders();
+  
+  // If the body is FormData, delete Content-Type to let browser set it automatically with boundary
+  if (options.body && options.body instanceof FormData) {
+    delete defaultHeaders['Content-Type'];
+  }
+
   const config = {
     ...options,
     headers: {
-      ...getHeaders(),
+      ...defaultHeaders,
       ...options.headers,
     },
   };
@@ -34,3 +41,4 @@ export const apiRequest = async (endpoint, options = {}) => {
 
   return data;
 };
+

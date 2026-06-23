@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FiX } from 'react-icons/fi';
+import { FiX, FiImage } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+
 
 const ProductFormModal = ({ isOpen, onClose, onSubmit, editingProduct }) => {
   const [formData, setFormData] = useState({
@@ -17,6 +18,8 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, editingProduct }) => {
     status: 'active',
     imageUrl: '',
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -35,6 +38,8 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, editingProduct }) => {
         status: editingProduct.status || 'active',
         imageUrl: editingProduct.image?.url || '',
       });
+      setImagePreview(editingProduct.image?.url || '');
+      setImageFile(null);
     } else {
       setFormData({
         title: '',
@@ -50,6 +55,8 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, editingProduct }) => {
         status: 'active',
         imageUrl: '',
       });
+      setImagePreview('');
+      setImageFile(null);
     }
   }, [editingProduct, isOpen]);
 
@@ -58,29 +65,50 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, editingProduct }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        return toast.error('Please select an image file');
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        return toast.error('Image size must be less than 5MB');
+      }
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.author || !formData.category || !formData.price) {
       return toast.error('Title, author, category, and retail price are required');
     }
 
-    const payload = {
-      title: formData.title,
-      author: formData.author,
-      isbn: formData.isbn,
-      category: formData.category,
-      description: formData.description,
-      price: Number(formData.price),
-      costPrice: formData.costPrice ? Number(formData.costPrice) : undefined,
-      stock: Number(formData.stock),
-      supplier: formData.supplier,
-      reorderLevel: Number(formData.reorderLevel),
-      status: formData.status,
-      image: {
-        public_id: '',
-        url: formData.imageUrl || '',
-      },
-    };
+    const payload = new FormData();
+    payload.append('title', formData.title);
+    payload.append('author', formData.author);
+    payload.append('isbn', formData.isbn);
+    payload.append('category', formData.category);
+    payload.append('description', formData.description);
+    payload.append('price', Number(formData.price));
+    if (formData.costPrice) {
+      payload.append('costPrice', Number(formData.costPrice));
+    }
+    payload.append('stock', Number(formData.stock));
+    payload.append('supplier', formData.supplier);
+    payload.append('reorderLevel', Number(formData.reorderLevel));
+    payload.append('status', formData.status);
+
+    if (imageFile) {
+      payload.append('image', imageFile);
+    } else {
+      // Send original image metadata if we didn't change it
+      payload.append('image', JSON.stringify({
+        public_id: editingProduct?.image?.public_id || '',
+        url: formData.imageUrl || ''
+      }));
+    }
 
     setLoading(true);
     try {
@@ -92,6 +120,7 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, editingProduct }) => {
       setLoading(false);
     }
   };
+
 
   if (!isOpen) return null;
 
@@ -267,20 +296,38 @@ const ProductFormModal = ({ isOpen, onClose, onSubmit, editingProduct }) => {
               />
             </div>
 
-            {/* Image URL Cover */}
-            <div className="sm:col-span-2">
+            {/* Book Cover Image File Upload */}
+            <div className="sm:col-span-2 space-y-2">
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                Book Cover Image Link (URL)
+                Book Cover Image
               </label>
-              <input
-                type="url"
-                name="imageUrl"
-                value={formData.imageUrl}
-                onChange={handleChange}
-                placeholder="https://example.com/cover.jpg"
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm font-medium focus:border-indigo-500 focus:bg-white focus:ring-1 focus:ring-indigo-500/50 outline-none transition-all"
-              />
+              
+              <div className="flex items-center gap-4">
+                {/* Preview bubble */}
+                <div className="w-16 h-20 border border-slate-200 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Cover Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-slate-300 text-[10px] font-bold uppercase">No Image</span>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <label className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer transition-colors">
+                    <FiImage className="w-4 h-4 text-slate-500" />
+                    <span>Choose Cover Image</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="text-[10px] text-slate-400 mt-1.5 font-medium">PNG, JPG, JPEG up to 5MB</p>
+                </div>
+              </div>
             </div>
+
 
             {/* Supplier */}
             <div className="sm:col-span-2">
