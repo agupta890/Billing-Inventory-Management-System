@@ -19,7 +19,7 @@ const settingsRoutes = require('./routes/settings-routes')
 
 // middleware use
 app.use(cors({
-    origin: true, // dynamically allow any requesting origin in development
+    origin: ["https://billing-inventory-management-system-n79h.onrender.com","http://localhost:5173/"], // dynamically allow any requesting origin in development
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
